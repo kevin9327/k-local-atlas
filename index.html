@@ -1,0 +1,2169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="K-Local Atlas turns ordinary Korean neighborhood routines into an interactive 3D and GPS walking map with four-language voice docents.">
+<title>K-Local Atlas : Alleyway Frequency 3D and Multilingual Audio Guide</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* Hallmark · Korean Architectural Hanji Atlas · K-Local Atlas */
+:root {
+  --bg-paper: #f6f2ea;
+  --bg-card: #fdfbf7;
+  --bg-inset: #ede7db;
+  --bg-stage: #191714;
+  --bg-hud: rgba(27, 24, 21, 0.90);
+  --border-hud: rgba(253, 251, 247, 0.18);
+  --ink-900: #1b1815;
+  --ink-700: #3d3730;
+  --ink-500: #5c5349;
+  --ink-300: #cfc6b8;
+  --hud-text: #f6f2ea;
+  --hud-accent: #e69f73;
+  --hud-muted: #c9c0b2;
+  --terracotta: #b84225;
+  --terracotta-soft: #f5e3dc;
+  --pine: #255842;
+  --pine-soft: #dfece5;
+  --ochre: #754e16;
+  --ochre-soft: #f3ead8;
+  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100%;
+  overflow-x: clip;
+  background-color: var(--bg-paper);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--terracotta);
+  outline-offset: 2px;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled,
+button[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.topbar {
+  border-bottom: 1px solid var(--ink-300);
+  background: var(--bg-card);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.topbar-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand-group {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brand-sub {
+  font-size: 13px;
+  color: var(--ink-500);
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lang-switch {
+  display: inline-flex;
+  border: 1px solid var(--ink-300);
+  border-radius: 4px;
+  background: var(--bg-inset);
+  padding: 4px;
+  gap: 4px;
+}
+
+.lang-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-700);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.lang-btn.active {
+  background: var(--bg-card);
+  border-color: var(--ink-300);
+  color: var(--ink-900);
+}
+
+.filter-pill {
+  border: 1px solid var(--ink-300);
+  background: transparent;
+  color: var(--ink-700);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.filter-pill.active {
+  background: var(--pine-soft);
+  border-color: var(--pine);
+  color: var(--pine);
+}
+
+.workspace {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.editorial-banner {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+  padding: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--ink-300);
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.banner-headline {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+
+.banner-desc {
+  font-size: 14px;
+  color: var(--ink-700);
+  max-width: 68ch;
+}
+
+.banner-meta-note {
+  font-size: 12px;
+  color: var(--terracotta);
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.banner-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-content: center;
+}
+
+.metric-box {
+  background: var(--bg-inset);
+  padding: 12px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--ink-300);
+}
+
+.metric-val {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.metric-lbl {
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-top: 4px;
+}
+
+.course-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.course-tab {
+  text-align: left;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--ink-300);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.course-tab:hover {
+  border-color: var(--ink-700);
+}
+
+.course-tab.active {
+  background: var(--ink-900);
+  color: var(--bg-card);
+  border-color: var(--ink-900);
+}
+
+.course-tab-region {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+.course-tab-name {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+.course-tab-meta {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.map-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--ink-300);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ink-300);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.engine-toggle {
+  display: inline-flex;
+  border: 1px solid var(--ink-300);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.engine-btn {
+  border: none;
+  background: var(--bg-inset);
+  color: var(--ink-700);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.engine-btn.active {
+  background: var(--terracotta);
+  color: var(--bg-card);
+}
+
+.viewport-wrap {
+  position: relative;
+  height: 452px;
+  background: var(--bg-stage);
+}
+
+#threeCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#leafletMap {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+.map-overlay-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--bg-hud);
+  color: var(--hud-text);
+  padding: 12px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border-hud);
+  max-width: 320px;
+  pointer-events: none;
+}
+
+.hud-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hud-accent);
+}
+
+.hud-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.hud-coords {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--hud-muted);
+  margin-top: 4px;
+}
+
+.audio-dock {
+  padding: 16px 20px;
+  background: var(--bg-inset);
+  border-top: 1px solid var(--ink-300);
+}
+
+.audio-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.audio-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--terracotta);
+}
+
+.audio-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  border: 1px solid var(--terracotta);
+  background: var(--terracotta);
+  color: var(--bg-card);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-secondary {
+  border: 1px solid var(--ink-300);
+  background: var(--bg-card);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-secondary.active {
+  background: var(--pine);
+  border-color: var(--pine);
+  color: var(--bg-card);
+}
+
+.script-box {
+  background: var(--bg-card);
+  border: 1px solid var(--ink-300);
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+.waveform-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 24px;
+  margin-top: 12px;
+}
+
+.wave-col {
+  flex: 1;
+  background: var(--ink-300);
+  height: 100%;
+  transform: scaleY(0.25);
+  transform-origin: bottom;
+  border-radius: 1px;
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+.wave-col.playing {
+  background: var(--terracotta);
+}
+
+.eleven-config {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ink-300);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.eleven-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  border: 1px solid var(--ink-300);
+  border-radius: 4px;
+  background: var(--bg-card);
+}
+
+.spots-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spot-card {
+  background: var(--bg-card);
+  border: 1px solid var(--ink-300);
+  border-radius: 6px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.spot-card.active {
+  border: 2px solid var(--terracotta);
+}
+
+.spot-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.spot-step {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  background: var(--ink-900);
+  color: var(--bg-card);
+  border-radius: 3px;
+}
+
+.spot-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-500);
+}
+
+.spot-name {
+  font-size: 17px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.spot-kr-addr {
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-top: 4px;
+}
+
+.spot-story {
+  font-size: 13px;
+  color: var(--ink-700);
+  margin-top: 12px;
+}
+
+.spot-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.badge-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 3px;
+  background: var(--bg-inset);
+  color: var(--ink-700);
+}
+
+.badge-pet {
+  background: var(--pine-soft);
+  color: var(--pine);
+}
+
+.badge-tip {
+  background: var(--ochre-soft);
+  color: var(--ochre);
+}
+
+.spot-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bg-inset);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-links {
+  display: flex;
+  gap: 8px;
+}
+
+.map-ext-link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border: 1px solid var(--ink-300);
+  border-radius: 3px;
+  background: var(--bg-paper);
+  white-space: nowrap;
+}
+
+.survival-section {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.survival-card {
+  background: var(--bg-card);
+  border: 1px solid var(--ink-300);
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.section-title {
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.section-sub {
+  font-size: 13px;
+  color: var(--ink-500);
+  margin-bottom: 12px;
+}
+
+.phrase-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.phrase-btn {
+  text-align: left;
+  padding: 12px;
+  border: 1px solid var(--ink-300);
+  border-radius: 5px;
+  background: var(--bg-paper);
+  cursor: pointer;
+}
+
+.phrase-btn:hover {
+  border-color: var(--terracotta);
+}
+
+.phrase-kr {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.phrase-tr {
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-top: 4px;
+}
+
+.owner-display {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--ink-900);
+  color: var(--bg-card);
+  border-radius: 5px;
+}
+
+.owner-display-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hud-accent);
+}
+
+.owner-display-kr {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.35;
+  margin-top: 8px;
+}
+
+.itinerary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.itinerary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-paper);
+  border: 1px solid var(--ink-300);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.itinerary-kr {
+  color: var(--ink-500);
+}
+
+@media (max-width: 1024px) {
+  .editorial-banner,
+  .main-grid,
+  .survival-section {
+    grid-template-columns: 1fr;
+  }
+  .course-tabs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand-group">
+      <h1 class="brand-title">K-Local Atlas : 골목의 주파수 (Alleyway Frequency 3D)</h1>
+      <span class="brand-sub" id="uiSubtitle">Everyday Korean Neighborhood Routines Turned Into Multilingual Audio Maps</span>
+    </div>
+    <div class="controls-row">
+      <button type="button" class="filter-pill" id="petFilterBtn">Trip-Pups Pet-Friendly</button>
+      <div class="lang-switch" role="group" aria-label="Language selector">
+        <button type="button" class="lang-btn active" data-lang="en">EN</button>
+        <button type="button" class="lang-btn" data-lang="ja">日本語</button>
+        <button type="button" class="lang-btn" data-lang="zh">中文</button>
+        <button type="button" class="lang-btn" data-lang="ko">한국어</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="editorial-banner">
+    <div>
+      <h2 class="banner-headline" id="heroTitle">Our Ordinary 8 AM Alleyway Is a Traveler’s Extraordinary Discovery</h2>
+      <p class="banner-desc" id="heroDesc">
+        Guidebooks send every visitor to the same crowded shopping streets. K-Local Atlas maps 6 authentic neighborhood micro-routes, from Seongsu leather workshops and Euljiro metalwork alleys to Seochon valley trails, paired with 4-language ElevenLabs and Studio voice docents, procedural alleyway soundscapes, and Trip-Pups pet-friendly verification.
+      </p>
+      <p class="banner-meta-note">Built for Korea Local Marketing Hackathon 2026 (HACK:ON, ElevenLabs, Trip-Pups)</p>
+    </div>
+    <div class="banner-metrics">
+      <div class="metric-box">
+        <div class="metric-val">6 Routes / 24 Spots</div>
+        <div class="metric-lbl" id="metricLbl1">Verified Local Micro-Courses</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-val">4 Languages</div>
+        <div class="metric-lbl" id="metricLbl2">EN, JA, ZH, KO Audio Docent</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-val">100% Live</div>
+        <div class="metric-lbl" id="metricLbl3">3D Diorama + GPS + Trip-Pups</div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="course-tabs" id="courseTabs" aria-label="Local Courses"></nav>
+
+  <section class="main-grid">
+    <div class="map-panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title" id="activeCourseTitle">Course 01 : Seongsu Artisan and Press Alley</div>
+          <div class="brand-sub" id="activeCourseWalk">Total Walk: 2.4 km, Est. 2h 30m (Subway Line 2 Ttukseom Exit 4)</div>
+        </div>
+        <div class="engine-toggle">
+          <button type="button" class="engine-btn active" id="btnEngine3D">3D Alley Diorama</button>
+          <button type="button" class="engine-btn" id="btnEngine2D">2D Real GPS Map</button>
+        </div>
+      </div>
+
+      <div class="viewport-wrap">
+        <canvas id="threeCanvas" aria-label="Interactive 3D Korean neighborhood alleyway diorama"></canvas>
+        <div id="leafletMap"></div>
+        <div class="map-overlay-hud">
+          <div class="hud-tag" id="hudStepTag">Stop 01 of 04 : Local Routine</div>
+          <div class="hud-title" id="hudSpotTitle">Ttukseom 24h Bean-Sprout Soup Alley</div>
+          <div class="hud-coords" id="hudSpotCoords">37.5472° N, 127.0473° E (Drag 3D view to rotate)</div>
+        </div>
+      </div>
+
+      <div class="audio-dock">
+        <div class="audio-top">
+          <div>
+            <span class="audio-badge" id="audioBadge">Multilingual AI Audio Docent (EN, JA, ZH, KO)</span>
+          </div>
+          <div class="audio-actions">
+            <button type="button" class="btn-primary" id="playDocentBtn">Play Voice Docent</button>
+            <button type="button" class="btn-secondary" id="ambientBtn">Alley Soundscape: OFF</button>
+            <button type="button" class="btn-secondary" id="elevenToggleBtn">ElevenLabs Live API</button>
+          </div>
+        </div>
+        <div class="script-box" id="docentTranscript"></div>
+        <div class="waveform-bar" id="waveformBar"></div>
+        <div class="eleven-config" id="elevenConfigRow" style="display:none;">
+          <input type="password" class="eleven-input" id="elevenApiKey" placeholder="Optional: Paste ElevenLabs API Key (xi-api-key) for live synthesis">
+          <button type="button" class="btn-secondary" id="runElevenBtn">Synthesize with ElevenLabs</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="spots-column" id="spotsColumn"></div>
+  </section>
+
+  <section class="survival-section">
+    <div class="survival-card">
+      <h3 class="section-title" id="survivalTitle">Korean Alleyway Ordering Passport (One-Tap Native Voice)</h3>
+      <p class="section-sub">Tap any phrase to play native Korean pronunciation and show the high-contrast card to the shop owner.</p>
+      <div class="phrase-grid" id="phraseGrid"></div>
+      <div class="owner-display">
+        <div class="owner-display-label">Show this screen to the shop owner (사장님께 보여드리는 화면)</div>
+        <div class="owner-display-kr" id="ownerDisplayKr">사장님, 안녕하세요! 혹시 혼자 왔는데 1인분 주문 가능할까요?</div>
+      </div>
+    </div>
+
+    <div class="survival-card">
+      <h3 class="section-title" id="itineraryTitle">Saved Walking Passport and GPX Map Export</h3>
+      <p class="section-sub">Export your customized local micro-course to Google Maps, Naver Map, or share with fellow travelers.</p>
+      <div class="itinerary-list" id="itineraryList"></div>
+      <div class="audio-actions">
+        <button type="button" class="btn-primary" id="exportGpxBtn">Download Route (.GPX)</button>
+        <button type="button" class="btn-secondary" id="copyShareBtn">Copy Course Link</button>
+      </div>
+      <p class="brand-sub" id="shareStatus" style="margin-top:12px;"></p>
+    </div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const COURSES = [
+  {
+    id: "seongsu",
+    region: "Seoul : Seongsu",
+    walk: "2.4 km, 2h 30m (Line 2 Ttukseom Exit 4)",
+    soundType: "workshop",
+    names: {
+      en: "Seongsu Shoemaker & Print Alley",
+      ja: "聖水・靴職人と印刷所の路地",
+      zh: "圣水洞手作鞋匠与印刷胡同",
+      ko: "성수 수제화 장인·인쇄골목 아침 루트"
+    },
+    transcripts: {
+      en: "Welcome to Seongsu Artisan Alley. Before this neighborhood became Seoul's trendiest café district, master shoemakers crafted leather boots by hand in these red-brick workshops for forty years. Start your morning at eight AM with a steaming bowl of bean-sprout soup alongside local printers, then follow the scent of roasted coffee toward Seoul Forest.",
+      ja: "聖水洞の職人路地へようこそ。ここは華やかなカフェ街になる前から、40年以上にわたり靴職人と印刷所が息づくローカルな街です。朝8時、地元の常連客と一緒に熱々のコンナムルクッパを味わい、赤レンガの工房を巡りましょう。",
+      zh: "欢迎来到圣水洞手作匠人胡同。在成为首尔最潮流的咖啡街之前，这里的红砖工坊已经手工制作皮鞋超过四十年。早晨八点，和当地印刷厂工人们一起喝一碗热腾腾的豆芽汤，感受最地道的首尔日常。",
+      ko: "성수동 수제화 장인 골목에 오신 것을 환영합니다. 화려한 팝업스토어 너머, 40년간 구두 망치 소리와 인쇄소 잉크 향기가 살아 숨 쉬는 진짜 서울의 아침 일상을 만나보세요."
+    },
+    spots: [
+      {
+        step: "01",
+        time: "08:15 AM",
+        lat: 37.5474,
+        lng: 127.0475,
+        height: 1.8,
+        color: 0xc24829,
+        petFriendly: false,
+        krName: "뚝섬역 아침 콩나물국밥 노포 골목",
+        krAddr: "서울 성동구 상원1길 14 (뚝섬역 4번 출구 도보 3분)",
+        names: {
+          en: "Ttukseom Printers' Morning Bean-Sprout Soup",
+          ja: "トゥッソム印刷工の朝コンナムルクッパ老舗",
+          zh: "纛岛印刷厂工人的早餐豆芽汤老店",
+          ko: "뚝섬역 인쇄골목 아침 콩나물국밥 노포"
+        },
+        stories: {
+          en: "At 8 AM, before any popup store opens, press operators from neighboring print shops gather for a 7,000-won earthen pot of boiling bean-sprout soup topped with poached egg and roasted seaweed.",
+          ja: "ポップアップストアが開く前の朝8時、近隣の印刷所の職人たちが7,000ウォンの熱々コンナムルクッパと半熟卵で一日を始める地元の朝食スポットです。",
+          zh: "早晨8点，在网红快闪店开门前，附近印刷厂的老师傅们都会来这里点一碗7000韩元的砂锅豆芽汤配水波蛋。",
+          ko: "팝업스토어가 문을 열기 전인 아침 8시, 인근 인쇄소·철공소 기장님들이 7,000원짜리 뚝배기 콩나물국밥에 수란을 곁들여 하루를 시작하는 진짜 성수의 아침입니다."
+        },
+        petTip: "Indoor dining only (No pets inside; takeout available)",
+        orderingTip: "Solo-friendly 100% / Cash & Foreign Card OK / Ask for mild ('안 맵게')"
+      },
+      {
+        step: "02",
+        time: "09:10 AM",
+        lat: 37.5446,
+        lng: 127.0548,
+        height: 2.5,
+        color: 0x966622,
+        petFriendly: true,
+        krName: "성수 수제화 공방 거리 & 가죽 자투리 골목",
+        krAddr: "서울 성동구 연무장길 37 일대 (성수역 1번 출구)",
+        names: {
+          en: "Seongsu Handmade Shoe Craft Alley & Leather Market",
+          ja: "聖水ハンドメイド靴工房通りと革市場",
+          zh: "圣水手工皮鞋工坊街与皮革胡同",
+          ko: "성수 수제화 공방 거리 및 가죽 시장 골목"
+        },
+        stories: {
+          en: "Look up at the second-floor windows of red-brick buildings to hear rhythmic cobbler hammers. Many leather ateliers sell off-cut leather keyrings and allow leashed dogs on the outdoor courtyard benches.",
+          ja: "赤レンガの建物の2階から靴職人の槌音が響きます。革工房の庭先では端革のキーリングを購入でき、リード着用で愛犬と一緒に散歩できます。",
+          zh: "抬头看红砖建筑二楼的窗户，能听见鞋匠敲打皮革的锤音。许多皮革工坊门口出售皮料钥匙扣，户外庭院欢迎系牵引绳的宠物犬。",
+          ko: "붉은 벽돌 건물 2층 창문마다 구두 장인의 망치 소리가 울려 퍼집니다. 가죽 자투리 공방 마당에서는 반려견과 함께 산책하며 수제 가죽 네임택을 각인할 수 있습니다."
+        },
+        petTip: "Trip-Pups Verified: Outdoor leather market & courtyard cafés welcome dogs",
+        orderingTip: "Custom English engraving available in 10 mins (12,000 KRW)"
+      },
+      {
+        step: "03",
+        time: "10:30 AM",
+        lat: 37.5468,
+        lng: 127.0424,
+        height: 2.2,
+        color: 0x255842,
+        petFriendly: true,
+        krName: "서울숲 북측 붉은벽돌 주택 개조 로스터리 골목",
+        krAddr: "서울 성동구 서울숲2길 44 (서울숲 산책로 연결)",
+        names: {
+          en: "Seoul Forest North Red-Brick Residential Roastery",
+          ja: "ソウルの森北側・赤レンガ住宅改装ロースタリー",
+          zh: "首尔林北侧红砖老宅改造烘焙咖啡巷",
+          ko: "서울숲 북측 붉은벽돌 주택 개조 로스터리 골목"
+        },
+        stories: {
+          en: "Converted from 1980s two-story brick homes, this quiet residential lane borders Seoul Forest. Locals walk their golden retrievers and rescue pups here every morning with a cup of drip coffee.",
+          ja: "1980年代の2階建て赤レンガ住宅を改装した静かな路地。毎朝地元の人々が愛犬と散歩しながらハンドドリップコーヒーを楽しむコースです。",
+          zh: "由1980年代双层红砖住宅改造而成的安静小巷，毗邻首尔林。每天清晨当地居民都会牵着狗狗在这里买一杯手冲咖啡。",
+          ko: "1980년대 2층 적벽돌 단독주택들을 개조한 조용한 골목으로, 아침마다 동네 주민들이 반려견과 함께 산책하며 드립 커피를 마시는 로컬 루트입니다."
+        },
+        petTip: "Trip-Pups Pick: 1F terrace & garden seats provide dog water bowls",
+        orderingTip: "English menu available / Signature Black Sesame Latte"
+      },
+      {
+        step: "04",
+        time: "11:45 AM",
+        lat: 37.5425,
+        lng: 127.0392,
+        height: 1.5,
+        color: 0x3b6e8c,
+        petFriendly: true,
+        krName: "응봉산 팔각정으로 이어지는 중랑천·한강 합수부 산책길",
+        krAddr: "서울 성동구 독서당로 60길 (서울숲 보행가교 연결)",
+        names: {
+          en: "Jungnang Stream & Han River Confluence Pedestrian Bridge",
+          ja: "中浪川と漢江の合流部・歩道橋トレイル",
+          zh: "中浪川与汉江交汇处步行天桥步道",
+          ko: "중랑천·한강 합수부 보행가교 산책길"
+        },
+        stories: {
+          en: "Cross the elevated white pedestrian bridge from Seoul Forest straight over the riverside highway. You get an unobstructed panorama of Gyeongui-Jungang Line trains crossing the river.",
+          ja: "ソウルの森から白い歩道橋を渡ると、川の上を走る京義中央線の列車と漢江のパノラマが一望できる地元ランナーの秘密コースです。",
+          zh: "从首尔林跨过白色步行天桥，即可饱览京义中央线列车跨过江面的全景，是当地晨跑者与遛狗居民的私藏路线。",
+          ko: "서울숲에서 보행가교를 건너 한강과 중랑천이 만나는 합수부로 이어지는 길로, 철교 위를 달리는 전철과 한강 윤슬을 한눈에 담는 동네 산책 명소입니다."
+        },
+        petTip: "Trip-Pups Pick: Wide car-free deck, ideal for small & large dogs",
+        orderingTip: "Free public access 24/7 / Best photo light at 11 AM or 5 PM"
+      }
+    ]
+  },
+  {
+    id: "euljiro",
+    region: "Seoul : Euljiro 3-ga",
+    walk: "1.8 km, 2h 00m (Line 2/3 Euljiro 3-ga Exit 11)",
+    soundType: "sizzle",
+    names: {
+      en: "Euljiro Metalwork & Rooftop Night Alley",
+      ja: "乙支路3街・鉄工所とルーフトップ夜市",
+      zh: "乙支路三街铁工所与天台大排档胡同",
+      ko: "을지로3가 철공소·진공관·노포 야장 루트"
+    },
+    transcripts: {
+      en: "Welcome to Euljiro 3-ga Metalwork and Night Market Alley. By day, tiny machine shops cut brass and steel and vacuum-tube artisans repair vintage amplifiers at Sewoon Sangga. After sunset, plastic tables spill into the narrow alleys for grilled dried pollack, garlic spicy whelk noodles, and cold draft beer under neon signs.",
+      ja: "乙支路3街の鉄工所と夜市の路地へようこそ。昼間は小さな町工場で金属加工の音が響き、夜になると路地にプラスチックのテーブルが並び、ノガリやコルベンイ素麺を楽しむソウルっ子で賑わいます。",
+      zh: "欢迎来到乙支路三街铁工所与夜市胡同。白天这里是精密金属加工与复古音响工坊的聚集地，夜晚窄巷里摆满塑料桌椅，当地人在这里品尝炭烤明太鱼干、辣拌海螺面和冰镇生啤。",
+      ko: "을지로 3가 철공소와 노포 야장 골목입니다. 낮에는 선반 기계 소리와 진공관 앰프가 울리고, 해가 지면 골목마다 플라스틱 테이블이 펼쳐지는 서울 직장인들의 진짜 밤 일상을 경험해 보세요."
+    },
+    spots: [
+      {
+        step: "01",
+        time: "04:30 PM",
+        lat: 37.5681,
+        lng: 126.9953,
+        height: 2.8,
+        color: 0x966622,
+        petFriendly: true,
+        krName: "세운상가 공중보행데크 & 진공관 앰프 수리방",
+        krAddr: "서울 중구 청계천로 159 (세운상가 3층 데크)",
+        names: {
+          en: "Sewoon Sangga Skywalk & Vacuum-Tube Audio Masters",
+          ja: "世運商街スカイウォークと真空管アンプ修理工房",
+          zh: "世运商街空中步道与真空管音响工坊",
+          ko: "세운상가 3층 공중보행데크 & 진공관 장인 공방"
+        },
+        stories: {
+          en: "Built in 1967 as Korea's first electronics arcade, Sewoon Sangga still houses 70-year-old engineers hand-soldering vacuum-tube amplifiers while hip rooftop cafés sit just one floor above.",
+          ja: "1967年に建てられた韓国初の総合電子商店街。70代の職人たちが真空管アンプを修理する隣で、若者たちがルーフトップカフェを楽しむ独特の空間です。",
+          zh: "建于1967年的韩国首座电子商街，七旬老匠人仍在手工焊接真空管功放，而楼顶则是俯瞰宗庙与南山的复古露台。",
+          ko: "1967년 완공된 대한민국 최초의 종합전자상가로, 40년 경력 장인들이 진공관 앰프를 납땜하는 풍경과 공중보행데크의 노을이 공존합니다."
+        },
+        petTip: "Trip-Pups Verified: 3F elevated outdoor skywalk allows leashed pets",
+        orderingTip: "Free admission / Ask before photographing inside small repair booths"
+      },
+      {
+        step: "02",
+        time: "05:30 PM",
+        lat: 37.5664,
+        lng: 126.9922,
+        height: 1.9,
+        color: 0xc24829,
+        petFriendly: false,
+        krName: "충무로·을지로 인쇄골목 계란노른자 쌍화차 다방",
+        krAddr: "서울 중구 을지로14길 12 (을지로3가역 9번 출구)",
+        names: {
+          en: "Euljiro Print Alley 1970s Herbal Tea Dabang",
+          ja: "乙支路印刷路地の1970年代風・双和茶タバン",
+          zh: "乙支路印刷胡同1970年代双和茶老茶房",
+          ko: "을지로 인쇄골목 1970년대식 계란 쌍화차 다방"
+        },
+        stories: {
+          en: "Climb a narrow tiled staircase above a hardware shop to find velvet booths where locals drink thick cinnamon-herbal Ssanghwacha floated with pine nuts and a raw egg yolk.",
+          ja: "金物屋の2階へと続く狭い階段を上ると、ベルベットのソファで松の実と卵黄を浮かべた濃厚な双和茶（サンファチャ）を味わえる昔ながらの茶房があります。",
+          zh: "沿着五金店旁狭窄的瓷砖楼梯上二楼，在复古天鹅绒卡座里品尝漂浮着松子与生蛋黄的传统韩方双和茶。",
+          ko: "공구상가 2층 좁은 타일 계단을 올라가면 벨벳 소파에 앉아 잣과 호두, 계란 노른자를 띄운 진한 쌍화차를 마실 수 있는 시간여행 다방이 나옵니다."
+        },
+        petTip: "2F indoor heritage tearoom (Pets not permitted inside)",
+        orderingTip: "No kiosk; order at seat / Try '옛날 쌍화차' (Traditional Herbal Tea)"
+      },
+      {
+        step: "03",
+        time: "06:45 PM",
+        lat: 37.5669,
+        lng: 126.9906,
+        height: 2.3,
+        color: 0xb84225,
+        petFriendly: true,
+        krName: "을지로3가 노가리·마늘골뱅이 야장 골목",
+        krAddr: "서울 중구 을지로13길 19 일대 (을지로3가역 3번 출구)",
+        names: {
+          en: "Euljiro 3-ga Outdoor Plastic-Table Nogari & Whelk Alley",
+          ja: "乙支路3街・ノガリ＆ニンニクコルベンイ野外テーブル路地",
+          zh: "乙支路三街露天塑料桌烤明太鱼与辣海螺胡同",
+          ko: "을지로3가 노가리·통마늘 골뱅이 야장 골목"
+        },
+        stories: {
+          en: "As soon as the hardware shutters roll down at 6 PM, hundreds of round plastic tables fill the alley. Order spicy whelk tossed with raw garlic and green onions alongside 1,500-won grilled pollack.",
+          ja: "夕方6時に工具店のシャッターが下りると、路地いっぱいに丸いプラスチックテーブルが並びます。生のニンニクが効いたコルベンイ素麺とノガリが名物です。",
+          zh: "傍晚六点五金店拉下卷帘门后，整条巷子瞬间摆满圆塑料桌。必点蒜香辣拌海螺配1500韩元的炭烤明太鱼干。",
+          ko: "저녁 6시 철공소 셔터가 내려가면 골목 전체가 야외 테이블로 변신합니다. 알싸한 통마늘 골뱅이무침과 연탄불 노가리가 서울의 밤을 깨웁니다."
+        },
+        petTip: "Outdoor alley edge tables often allow quiet pets in carriers",
+        orderingTip: "Very spicy by default; show the Mild Card to ask for less chili"
+      },
+      {
+        step: "04",
+        time: "08:30 PM",
+        lat: 37.5642,
+        lng: 126.9945,
+        height: 2.0,
+        color: 0x255842,
+        petFriendly: false,
+        krName: "충무로 인현시장 골목 모둠전 & 막걸리 노포",
+        krAddr: "서울 중구 마른내로6길 21 (인현시장 골목 안)",
+        names: {
+          en: "Inhyeon Market Sizzling Savory Pancakes & Rice Wine Alley",
+          ja: "仁峴市場路地の盛り合わせチヂミ＆マッコリ老舗",
+          zh: "忠武路仁岘市场胡同什锦煎饼与米酒老铺",
+          ko: "충무로 인현시장 골목 모둠전 & 생막걸리 노포"
+        },
+        stories: {
+          en: "Tucked inside a covered printing-district market alley, aunties pan-fry zucchini, cod fillet, and mung-bean pancakes on cast-iron griddles right in the corridor.",
+          ja: "印刷街のアーケード市場の奥で、お母さんたちが鉄板の上でズッキーニやタラ、緑豆チヂミを目の前で焼き上げてくれる人情味あふれる横丁です。",
+          zh: "藏在印刷街拱廊市场深处，大婶们在走廊的铸铁平底锅上现煎西葫芦、鳕鱼片和绿豆饼，配一壶冰镇生米酒。",
+          ko: "인쇄소 골목 안쪽 인현시장 통로에서 이모님들이 철판 가득 동태전, 호박전, 빈대떡을 구워내며 푸짐한 인심을 나누는 골목입니다."
+        },
+        petTip: "Narrow indoor market corridor (Not suitable for pets)",
+        orderingTip: "Ask for '모둠전 소자' (Small Assorted Pancakes, 18,000 KRW)"
+      }
+    ]
+  },
+  {
+    id: "seochon",
+    region: "Seoul : Seochon & Inwangsan",
+    walk: "2.9 km, 3h 00m (Line 3 Gyeongbokgung Exit 2)",
+    soundType: "stream",
+    names: {
+      en: "Seochon Poet's Trail & Inwangsan Guardpost",
+      ja: "西村・詩人の散歩道と仁王山ブックカフェ",
+      zh: "西村诗人散步路与仁王山哨所书房",
+      ko: "서촌 통인시장·수성동계곡·인왕산 초소책방 루트"
+    },
+    transcripts: {
+      en: "Welcome to Seochon Poet's Trail, west of Gyeongbokgung Palace. Trade modern coins for brass yeopjeon tokens at Tongin Market, walk up to Suseongdong Valley where Joseon dynasty painters sketched pine-covered rocks, and finish at Inwangsan Guardpost Book Café overlooking Seoul at sunset.",
+      ja: "景福宮の西側に広がる西村・詩人の散歩道へようこそ。通仁市場で昔ながらの銅銭弁当を楽しみ、朝鮮時代の画家が描いた水声洞渓谷から仁王山のブックカフェまで静かな日常を歩きましょう。",
+      zh: "欢迎来到景福宫西侧的西村诗人散步路。在通仁市场用古铜钱兑换传统便当，沿着朝鲜时代山水画中的水声洞渓谷漫步，最后在仁王山哨所书房俯瞰首尔落日。",
+      ko: "경복궁 서쪽, 서촌 시인의 산책길입니다. 통인시장 엽전 도시락부터 겸재 정선이 그린 수성동계곡, 그리고 인왕산 초소책방의 노을까지 서울의 가장 고즈넉한 일상을 걸어보세요."
+    },
+    spots: [
+      {
+        step: "01",
+        time: "11:30 AM",
+        lat: 37.5808,
+        lng: 126.9706,
+        height: 1.7,
+        color: 0xc24829,
+        petFriendly: false,
+        krName: "통인시장 엽전 도시락카페 & 기름떡볶이",
+        krAddr: "서울 종로구 자하문로15길 18 (경복궁역 2번 출구)",
+        names: {
+          en: "Tongin Market Brass-Coin Lunchbox & Wok-Fried Tteokbokki",
+          ja: "通仁市場の銅銭弁当と油トッポッキ",
+          zh: "通仁市场古铜钱便当与铁锅油炒年糕",
+          ko: "통인시장 엽전 도시락 & 원조 기름떡볶이"
+        },
+        stories: {
+          en: "Take a plastic tray and a string of Joseon-style brass coins down the market aisle, trading 1 or 2 coins at each stall for crispy oil-fried rice cakes, rolled omelets, and perilla-leaf pancakes.",
+          ja: "プラスチックのトレーと朝鮮時代の銅銭（ヨプチョン）を持って市場を歩き、香ばしい油トッポッキや卵焼きを少しずつ盛り付ける体験型ローカル市場です。",
+          zh: "拿着托盘和一串仿古铜钱走过市场通道，在各个摊位用一两枚铜钱兑换铁锅油炒年糕、鸡蛋卷和紫苏叶煎饼。",
+          ko: "엽전 꾸러미와 도시락 판을 들고 시장 골목을 누비며 고소한 간장·고추장 기름떡볶이와 계란말이를 골라 담는 서촌의 명물 시장입니다."
+        },
+        petTip: "Crowded food market aisle (Carry small pets in closed bags only)",
+        orderingTip: "Exchange 10,000 KRW for 20 brass coins at the 2F Customer Center"
+      },
+      {
+        step: "02",
+        time: "01:00 PM",
+        lat: 37.5819,
+        lng: 126.9658,
+        height: 2.1,
+        color: 0x966622,
+        petFriendly: true,
+        krName: "옥인동 박노수 가옥 골목 & 한옥 독립서점",
+        krAddr: "서울 종로구 옥인1길 34 일대",
+        names: {
+          en: "Ogin-dong Painter's House Lane & Hanok Bookshops",
+          ja: "玉仁洞・朴魯寿家屋の路地と韓屋独立書店",
+          zh: "玉仁洞朴鲁寿故居小巷与韩屋独立书店",
+          ko: "옥인동 박노수 가옥 골목 및 한옥 독립서점"
+        },
+        stories: {
+          en: "Unlike tourist-heavy Bukchon, Seochon's Ogin-dong lane preserves lived-in 1930s brick-and-wood homes, tiny poetry bookshops, and quiet neighborhood benches.",
+          ja: "観光客で混雑する北村とは異なり、1930年代の赤レンガと韓屋が融合した住宅や小さな詩集専門の本屋が静かに佇む生活路地です。",
+          zh: "不同于游客密集的北村，西村玉仁洞保留着1930年代砖木结合的老宅、袖珍诗歌书店与宁静的街角长椅。",
+          ko: "관광객으로 붐비는 북촌과 달리, 1930년대 절충식 가옥과 작은 한옥 독립서점들이 조용히 자리 잡은 서촌 주민들의 생활 산책로입니다."
+        },
+        petTip: "Trip-Pups Verified: Peaceful car-light residential lane great for walks",
+        orderingTip: "Keep voices low in residential alleys / Independent zines available"
+      },
+      {
+        step: "03",
+        time: "02:30 PM",
+        lat: 37.5853,
+        lng: 126.9624,
+        height: 3.0,
+        color: 0x255842,
+        petFriendly: true,
+        krName: "인왕산 수성동계곡 기린교 (겸재 정선 진경산수화 실경)",
+        krAddr: "서울 종로구 옥인동 185-3 (마을버스 종로09 종점)",
+        names: {
+          en: "Suseongdong Valley Girin Bridge (18th-Century Landscape Site)",
+          ja: "水声洞渓谷・麒麟橋（18世紀山水画の実景地）",
+          zh: "仁王山水声洞渓谷麒麟桥（18世纪山水画实景地）",
+          ko: "인왕산 수성동계곡 기린교 (겸재 정선 실경산수지)"
+        },
+        stories: {
+          en: "Ride the tiny green Jongno-09 village bus to its final stop and step directly into the exact stone bridge and pine valley painted by master Jeong Seon 270 years ago.",
+          ja: "緑色のマウルバス「鍾路09」の終点で降りると、270年前に朝鮮の画家・鄭敾が描いた石橋と松の渓谷がそのまま目の前に広がります。",
+          zh: "乘坐绿色社区小巴“钟路09”到终点站，步入270年前朝鲜画圣郑敾笔下一模一样的石桥与松林溪谷。",
+          ko: "초록색 마을버스 종로09번 종점에 내리면 270년 전 겸재 정선이 화폭에 담았던 기린교 돌다리와 인왕산 암벽 계곡이 그대로 펼쳐집니다."
+        },
+        petTip: "Trip-Pups Pick: Top local dog-walking valley trail with gentle wooden decks",
+        orderingTip: "Free park access / Take green bus Jongno-09 from Gyeongbokgung Exit 3"
+      },
+      {
+        step: "04",
+        time: "04:45 PM",
+        lat: 37.5882,
+        lng: 126.9661,
+        height: 3.6,
+        color: 0x3b6e8c,
+        petFriendly: true,
+        krName: "인왕산 초소책방 (옛 청와대 방호초소 리모델링 전망 카페)",
+        krAddr: "서울 종로구 인왕산로 172",
+        names: {
+          en: "Inwangsan Guardpost Book Café (Former Military Bunker)",
+          ja: "仁王山・哨所ブックカフェ（旧警備哨所展望テラス）",
+          zh: "仁王山哨所书房（旧警卫哨所改造全景露台）",
+          ko: "인왕산 초소책방 (옛 방호초소 리모델링 노을 전망대)"
+        },
+        stories: {
+          en: "For 50 years this concrete bunker guarded the mountain perimeter above the Blue House. Today its blast walls frame an open-air timber deck looking straight at Namsan Tower at golden hour.",
+          ja: "50年間立ち入りが制限されていた旧警備哨所をリノベーションしたブックカフェ。夕暮れ時にはソウル市街とNソウルタワーの絶景が広がります。",
+          zh: "这座混凝土哨所曾封闭守护山脊五十年，如今改造为开放式木栈道书房，黄昏时可直面南山塔与首尔全城落日。",
+          ko: "50년간 일반인 출입이 통제되었던 옛 방호초소를 개조한 숲속 책방으로, 야외 데크에서 남산타워와 서울 도심 노을을 한눈에 조망할 수 있습니다."
+        },
+        petTip: "Trip-Pups Pick: Spacious outdoor forest deck welcomes leashed dogs",
+        orderingTip: "Accepts foreign Visa/Mastercard / Eco-discount for bringing a tumbler"
+      }
+    ]
+  },
+  {
+    id: "mangwon",
+    region: "Seoul : Mangwon & Dangin-ri",
+    walk: "2.6 km, 2h 30m (Line 6 Mangwon Exit 2)",
+    soundType: "river",
+    names: {
+      en: "Mangwon Market & Dangin-ri Indie Track",
+      ja: "望遠市場ピクニックと唐人里廃線トレイル",
+      zh: "望远市场汉江野餐与唐人里旧铁轨步道",
+      ko: "망원시장 장보기·한강 피크닉·당인리 옛 철길 루트"
+    },
+    transcripts: {
+      en: "Welcome to Mangwon Market and Dangin-ri Indie Track. Pick up crispy stuffed chili tempura and sweet-spicy chicken at Mangwon Market, picnic with neighborhood dogs on the Han River lawn, and stroll along the retired railway tracks of Korea's first power plant toward underground vinyl bars.",
+      ja: "望遠市場と唐人里インディートラックへようこそ。活気あふれる望遠市場で揚げたての唐辛子天ぷらやタッカンジョンを買い、愛犬と散歩する地元の人々と一緒に漢江公園でピクニックを楽しみましょう。",
+      zh: "欢迎来到望远市场与唐人里独立音乐步道。在望远市场品尝现炸青椒天妇罗和甜辣炸鸡，带着宠物在汉江公园草坪野餐，再沿着老发电厂旧铁轨走向地下黑胶唱片吧。",
+      ko: "망원시장과 당인리 옛 철길 산책로입니다. 시장 골목에서 갓 튀긴 고추튀김을 사 들고 반려견과 함께 망원한강공원 잔디밭을 걷는 동네 주민들의 평화로운 오후를 만나보세요."
+    },
+    spots: [
+      {
+        step: "01",
+        time: "03:00 PM",
+        lat: 37.5561,
+        lng: 126.9056,
+        height: 1.8,
+        color: 0xc24829,
+        petFriendly: false,
+        krName: "망원시장 수제 고추튀김 & 과일 닭강정 장보기",
+        krAddr: "서울 마포구 포은로8길 14 (망원역 2번 출구 도보 5분)",
+        names: {
+          en: "Mangwon Market Giant Stuffed Chili Tempura & Sweet Chicken",
+          ja: "望遠市場の巨大唐辛子天ぷら＆タッカンジョン",
+          zh: "望远市场巨型酿青椒天妇罗与甜辣炸鸡",
+          ko: "망원시장 수제 고추튀김 & 닭강정 피크닉 포장"
+        },
+        stories: {
+          en: "Locals line up with paper trays for forearm-sized green chilies stuffed with minced pork and glass noodles, fried crisp to order for 3,500 won each.",
+          ja: "地元の人々が紙トレーを持って並ぶ名物店。豚ひき肉と春雨をたっぷり詰めた巨大な青唐辛子の天ぷらが1個3,500ウォンで揚げたてで味わえます。",
+          zh: "当地人拿着纸托盘排队的名店，酿满猪肉末与粉丝的巨型青椒天妇罗现炸出锅，每个仅3500韩元，非常适合打包去汉江野餐。",
+          ko: "다진 고기와 당면을 가득 채워 바삭하게 튀겨낸 팔뚝만 한 수제 고추튀김과 닭강정을 포장해 한강 피크닉을 준비하는 망원동 필수 코스입니다."
+        },
+        petTip: "Pack takeout boxes in 5 mins for the Han River lawn walk",
+        orderingTip: "Cash or Korean bank transfer preferred for small snacks; cards accepted at main stalls"
+      },
+      {
+        step: "02",
+        time: "04:00 PM",
+        lat: 37.5523,
+        lng: 126.8962,
+        height: 1.4,
+        color: 0x255842,
+        petFriendly: true,
+        krName: "망원한강공원 성산대교 남단 잔디밭 & 서울함 노을",
+        krAddr: "서울 마포구 마포나루길 467 (망원나들목 통과)",
+        names: {
+          en: "Mangwon Han River Lawn & Seongsan Bridge Sunset",
+          ja: "望遠漢江公園の芝生広場と城山大橋の夕日",
+          zh: "望远汉江公园草坪与城山大桥落日",
+          ko: "망원한강공원 잔디밭 반려견 산책 & 성산대교 노을"
+        },
+        stories: {
+          en: "Walk through the brick floodgate tunnel ('Nadeulmok') and suddenly the sky opens over the Han River. Every evening dozens of neighborhood dogs play along the riverside clover lawn.",
+          ja: "レンガ造りのトンネル（ナドゥルモク）を抜けると視界が一気に開け、城山大橋の夕日の下で地元の愛犬たちが芝生を駆け回る平和な風景に出会えます。",
+          zh: "穿过红砖堤坝涵洞，视野瞬间豁然开朗。每天傍晚都有数十只社区宠物犬在城山大桥下的江畔草坪上奔跑。",
+          ko: "망원나들목 굴다리를 빠져나오면 탁 트인 한강과 성산대교가 펼쳐지고, 동네 강아지들이 잔디밭에서 뛰어노는 가장 평화로운 오후를 만날 수 있습니다."
+        },
+        petTip: "Trip-Pups Pick: #1 West-Seoul riverside dog lawn & breeze trail",
+        orderingTip: "Convenience store ramen cookers located 100m left of the tunnel exit"
+      },
+      {
+        step: "03",
+        time: "05:45 PM",
+        lat: 37.5458,
+        lng: 126.9152,
+        height: 2.0,
+        color: 0x966622,
+        petFriendly: true,
+        krName: "당인리 화력발전소 옛 석탄 인입선 철길 산책로",
+        krAddr: "서울 마포구 토정로5길 17 일대",
+        names: {
+          en: "Dangin-ri Power Plant Retired Coal Railway Path",
+          ja: "唐人里火力発電所・旧石炭引き込み線トレイル",
+          zh: "唐人里发电厂旧运煤铁轨林荫步道",
+          ko: "당인리 발전소 옛 철길 산책로 (어울마당로 연결)"
+        },
+        stories: {
+          en: "Follow the curved line of trees that still traces the 1930s railway spur used to haul coal to Korea's oldest power station, now lined with quiet design studios and bakeries.",
+          ja: "1930年代に韓国最古の発電所へ石炭を運んでいた引き込み線のカーブに沿って、静かなデザインスタジオやベーカリーが並ぶ散歩道です。",
+          zh: "沿着1930年代向韩国最早发电厂运送煤炭的弯曲铁轨遗迹漫步，两旁如今是安静的设计工作室与独立面包房。",
+          ko: "1930년대 당인리 발전소로 석탄을 나르던 옛 기찻길 곡선을 따라 메타세쿼이아 나무와 조용한 로스터리, 공방들이 이어지는 숨은 산책길입니다."
+        },
+        petTip: "Trip-Pups Verified: Shaded pedestrian-priority path with outdoor benches",
+        orderingTip: "Great twilight photography along the curved brick walls"
+      },
+      {
+        step: "04",
+        time: "07:30 PM",
+        lat: 37.5489,
+        lng: 126.9184,
+        height: 2.2,
+        color: 0x3b6e8c,
+        petFriendly: false,
+        krName: "합정·상수 골목 한국 시티팝·인디 바이닐(LP) 청음 바",
+        krAddr: "서울 마포구 독막로7길 28 지층",
+        names: {
+          en: "Hapjeong Underground Korean City-Pop & Indie Vinyl Bar",
+          ja: "合井・韓国シティポップ＆インディーLPレコードバー",
+          zh: "合井地下韩国城市流行与独立黑胶唱片吧",
+          ko: "합정·상수 골목 한국 인디·바이닐(LP) 청음 바"
+        },
+        stories: {
+          en: "Write a song request on a paper slip and hear rare 1970s and 80s Korean psychedelic rock and modern Hongdae indie pressed on warm analog vinyl.",
+          ja: "リクエスト用紙に曲名を書いて渡すと、1970〜80年代の韓国ロックやインディー名盤をアナログLPの温かい音色で聴かせてくれる隠れ家バーです。",
+          zh: "在纸条上写下点播曲目，用温暖的模拟黑胶聆听1970至80年代韩国迷幻摇滚与弘大独立音乐名盘。",
+          ko: "신청곡 쪽지를 건네면 1970~80년대 한국 포크·소울 명반과 홍대 인디 뮤지션들의 LP를 아날로그 스피커로 들려주는 심야 아지트입니다."
+        },
+        petTip: "Basement listening bar (Loud audio; not suitable for pets)",
+        orderingTip: "No cover charge on weekdays / Request Korean 80s classics (Yoo Jae-ha, Kim Hyun-sik)"
+      }
+    ]
+  },
+  {
+    id: "yeongdo",
+    region: "Busan : Yeongdo Island",
+    walk: "3.1 km, 3h 00m (Busan Metro Line 1 Nampo Exit 6)",
+    soundType: "waves",
+    names: {
+      en: "Busan Yeongdo Shipyard & Cliffside Alley",
+      ja: "釜山・影島の造船所とヒンヨウル絶壁路地",
+      zh: "釜山影岛修船厂与白浅滩悬崖海女村",
+      ko: "부산 영도 깡깡이 수리조선소·흰여울 해안절벽 루트"
+    },
+    transcripts: {
+      en: "Welcome to Busan Yeongdo Shipyard and Huinnyeoul Cliffside Alley. Hear the rhythmic hammers of Kkangkangi ship-repair artisans, walk along the dramatic white coastal cliffs above emerald waves, and eat fresh sea-urchin kimbap and seafood ramen prepared by local women divers by the lighthouse.",
+      ja: "釜山・影島の造船所とヒンヨウル海岸路地へようこそ。カンカンイ芸術村の修理造船所の槌音を聞きながら、エメラルド色の海を見下ろす絶壁の路地を歩き、海女さんが作る海鮮ラーメンを味わいましょう。",
+      zh: "欢迎来到釜山影岛造船厂与白浅滩悬崖胡同。聆听修船匠人敲击铁锈的节奏，沿着碧海之上的白色悬崖小巷漫步，在灯塔下品尝海女现煮的海鲜拉面与海胆紫菜包饭。",
+      ko: "부산 영도 깡깡이 수리조선소와 흰여울 해안절벽 골목입니다. 파도 소리와 배 고치는 망치 소리를 따라 걷고, 등대 아래 해녀촌에서 바다 내음 가득한 라면을 맛보세요."
+    },
+    spots: [
+      {
+        step: "01",
+        time: "10:00 AM",
+        lat: 35.0912,
+        lng: 129.0378,
+        height: 2.0,
+        color: 0x966622,
+        petFriendly: true,
+        krName: "영도 대평동 깡깡이 수리조선소 골목 & 선박 부속 거리",
+        krAddr: "부산 영도구 대평북로 36 (영도대교 건너 우측 부두)",
+        names: {
+          en: "Daepyeong-dong 'Kkangkangi' Ship-Repair Dock & Brass Propellers",
+          ja: "大平洞「カンカンイ」修理造船所路地と巨大スクリュー通り",
+          zh: "影岛大平洞“铛铛伊”修船厂胡同与黄铜螺旋桨街",
+          ko: "영도 대평동 깡깡이 수리조선소 골목 & 선박 스크루 거리"
+        },
+        stories: {
+          en: "Named after the 'kkang-kkang' hammer sound of workers chipping rust off ship hulls, this working harbor lane displays giant bronze ship propellers right on the sidewalk.",
+          ja: "船底のサビを落とす「カンカン」という槌音から名付けられた港町。歩道に巨大な真鍮製の船舶スクリューが並ぶダイナミックな風景が魅力です。",
+          zh: "因敲除船底铁锈发出的“铛铛”锤声而得名，街道两旁摆放着比人还高的巨型黄铜船用螺旋桨，充满工业海港气息。",
+          ko: "배 밑바닥의 녹을 망치로 두드려 벗겨내던 '깡깡' 소리에서 유래한 한국 근대 수리조선 1번지로, 골목마다 거대한 황동 스크루가 놓여 있습니다."
+        },
+        petTip: "Trip-Pups Verified: Harbor boardwalk open to leashed dogs (watch for workshop carts)",
+        orderingTip: "Visit the harbor museum café for local roasted coffee"
+      },
+      {
+        step: "02",
+        time: "11:30 AM",
+        lat: 35.0785,
+        lng: 129.0442,
+        height: 2.9,
+        color: 0x3b6e8c,
+        petFriendly: true,
+        krName: "흰여울문화마을 해안절벽 담장길 & 바다 전망 서점",
+        krAddr: "부산 영도구 흰여울길 379",
+        names: {
+          en: "Huinnyeoul Coastal Cliffside Lane & Ocean-View Bookstores",
+          ja: "ヒンヨウル文化村の海岸絶壁路地と海が見える本屋",
+          zh: "白浅滩文化村海岸悬崖小巷与海景独立书店",
+          ko: "흰여울문화마을 해안절벽 담장길 & 바다 전망 독립서점"
+        },
+        stories: {
+          en: "Perched high on a steep cliff facing dozens of anchored cargo ships in Busan's outer harbor, this narrow white alley feels like an East Asian Santorini with real maritime grit.",
+          ja: "外港に停泊する無数の大型船を見下ろす急傾斜の崖の上に続く白い路地。海風が吹き抜ける窓辺で読書とコーヒーが楽しめます。",
+          zh: "坐落在俯瞰外港数十艘远洋货轮的陡峭悬崖之上，洁白狭窄的步道伴随海风，随处可见面朝大海的独立书店与咖啡馆。",
+          ko: "외항에 정박한 수많은 대형 선박들과 에메랄드빛 남해 바다를 발아래 두고 절벽 위 좁은 골목을 걷는 부산 최고의 해안 산책로입니다."
+        },
+        petTip: "Trip-Pups Pick: Scenic cliffside footpath; use stairs bypass ramp for strollers",
+        orderingTip: "Take Bus 7, 71, or 508 from Nampo Station to Baekryeonsa stop"
+      },
+      {
+        step: "03",
+        time: "01:15 PM",
+        lat: 35.0604,
+        lng: 129.0771,
+        height: 1.6,
+        color: 0xc24829,
+        petFriendly: true,
+        krName: "영도 중리·태종대 해녀촌 바닷가 성게김밥 & 해물라면",
+        krAddr: "부산 영도구 해양힐링로 55 (중리해변 해녀촌)",
+        names: {
+          en: "Yeongdo Haenyeo Women-Divers' Sea Urchin Kimbap & Ramen",
+          ja: "影島・海女村のウニキンパ＆海鮮ラーメン",
+          zh: "影岛海女村海胆紫菜包饭与现煮海鲜拉面",
+          ko: "영도 해녀촌 갓 잡아 올린 성게김밥 & 해물라면"
+        },
+        stories: {
+          en: "Sit on low stools right on the pebble shore while veteran Haenyeo women divers slice fresh sea urchin roe and sea squirt to wrap over warm seaweed rice rolls with a pot of octopus ramen.",
+          ja: "小石の海岸のすぐそばに座り、ベテランの海女さんがその場でさばいた新鮮なウニをキンパに乗せ、タコ入り海鮮ラーメンと一緒に味わう贅沢な昼食です。",
+          zh: "坐在鹅卵石海滩边的矮凳上，品尝资深海女现剖的新鲜海胆紫菜包饭，再配一锅热气腾腾的章鱼海鲜拉面。",
+          ko: "파도가 바로 발앞까지 밀려오는 자갈 해변에 앉아, 해녀 어머님들이 직접 물질해 건져 올린 성게알을 김밥 위에 듬뿍 얹어 해물라면과 함께 먹습니다."
+        },
+        petTip: "Trip-Pups Pick: Open-air pebble shore tables welcome well-behaved dogs",
+        orderingTip: "Bring cash or Korean bank transfer for fastest ordering by the rocks"
+      },
+      {
+        step: "04",
+        time: "03:30 PM",
+        lat: 35.0846,
+        lng: 129.0692,
+        height: 2.4,
+        color: 0x255842,
+        petFriendly: true,
+        krName: "청학배수지 전망대 부산항 대교 파노라마 노을",
+        krAddr: "부산 영도구 와치로 44",
+        names: {
+          en: "Cheonghak Reservoir Deck Overlooking Busan Harbor Bridge",
+          ja: "青鶴配水池展望台・釜山港大橋パノラマ夜景",
+          zh: "青鹤配水池观景台釜山港大桥全景",
+          ko: "청학배수지 전망대 부산항대교 파노라마 뷰"
+        },
+        stories: {
+          en: "Where locals go instead of crowded tourist towers: a quiet hillside reservoir park looking straight down at the sweeping spiral ramps of Busan Harbor Bridge.",
+          ja: "観光タワーの代わりに地元の人々が訪れる丘の上の公園。釜山港大橋の巨大なループと港のパノラマを静かに一望できます。",
+          zh: "本地人替代热门观光塔的私藏山坡公园，可正面俯瞰釜山港大桥震撼的螺旋引桥与海港全景。",
+          ko: "복잡한 유료 전망대 대신 영도 주민들이 산책 삼아 오르는 언덕 위 공원으로, 부산항대교의 웅장한 곡선과 항구 전경이 발아래 펼쳐집니다."
+        },
+        petTip: "Trip-Pups Verified: Quiet wooden observation deck & hillside park",
+        orderingTip: "Free admission / Best visited 30 mins before sunset"
+      }
+    ]
+  },
+  {
+    id: "cheongju",
+    region: "Cheongju : Old Town & Suamgol",
+    walk: "2.5 km, 2h 30m (KTX Osong / Cheongju Airport 25m)",
+    soundType: "stream",
+    names: {
+      en: "Cheongju Jikji Old Town & Suamgol Rooftop",
+      ja: "清州・六距離朝市とスアムゴル展望路地",
+      zh: "清州六街早市、城安街老铺与寿岩谷山坡",
+      ko: "청주 육거리시장·성안길 50년 노포·수암골 루트"
+    },
+    transcripts: {
+      en: "Welcome to Cheongju Suamgol Rooftop and Seongan-gil Old Town Route, home of Jikji, the world's oldest movable metal type. Begin at Yukgeori Market at dawn for handmade dumplings, explore fifty-year-old bookstores and spicy chewy noodles on Seongan-gil, and watch the city lights from Suamgol hillside village.",
+      ja: "世界最古の金属活字「直指」の故郷、清州のスアムゴルと城安街ルートへようこそ。六距離市場の朝市で手作りマンドゥを味わい、老舗書店とチョルミョンの名店を巡り、丘の上から街の夜景を眺めましょう。",
+      zh: "欢迎来到世界最古老金属活字《直指》的故乡——清州寿岩谷与城安街路线。清晨在六街综合市场品尝手工饺子，探访五十年老书店与筋面老店，傍晚在寿岩谷山坡俯瞰全城灯火。",
+      ko: "세계 최고 금속활자 직지의 도시, 청주 성안길과 수암골 루트입니다. 육거리시장의 활기찬 아침 만두부터 50년 전통 쫄면 노포, 수암골 전망대의 노을까지 내륙 로컬의 진수를 담았습니다."
+    },
+    spots: [
+      {
+        step: "01",
+        time: "09:30 AM",
+        lat: 36.6268,
+        lng: 127.4912,
+        height: 1.7,
+        color: 0xc24829,
+        petFriendly: false,
+        krName: "청주 육거리종합시장 가마솥 소머리국밥 & 수제 만두",
+        krAddr: "충북 청주시 상당구 무심동로 336 (육거리시장 골목)",
+        names: {
+          en: "Yukgeori Traditional Market Cauldron Soup & Steamed Dumplings",
+          ja: "六距離総合市場の大釜クッパ＆手作りマンドゥ",
+          zh: "清州六街综合市场大铁锅牛头汤饭与手工蒸饺",
+          ko: "청주 육거리종합시장 가마솥 국밥 & 수제 김치만두"
+        },
+        stories: {
+          en: "One of central Korea's largest traditional markets. Steam billows from giant iron cauldrons simmering beef broth since 5 AM alongside baskets of spicy cabbage-and-pork dumplings.",
+          ja: "忠清北道最大の伝統市場。朝5時から巨大な鉄釜で煮込まれる牛骨スープの湯気と、ピリ辛の白菜キムチマンドゥの香りが漂います。",
+          zh: "忠清北道规模最大的传统市场，清晨五点起大铁锅便翻滚着浓郁牛骨汤，配上一笼热气腾腾的现包泡菜蒸饺。",
+          ko: "새벽 5시부터 커다란 무쇠 가마솥에서 뽀얀 사골 국물이 끓어오르고, 매콤하고 아삭한 청주식 수제 김치만두를 쪄내는 충청권 최대 전통시장입니다."
+        },
+        petTip: "Busy food market arcade (Takeout dumplings available in 2 mins)",
+        orderingTip: "Very generous portions; 1 order of dumplings (5,000 KRW) feeds two"
+      },
+      {
+        step: "02",
+        time: "11:15 AM",
+        lat: 36.6352,
+        lng: 127.4895,
+        height: 2.1,
+        color: 0x966622,
+        petFriendly: false,
+        krName: "성안길 50년 전통 양배추 쫄면 & 바삭 간장 탕수육 노포",
+        krAddr: "충북 청주시 상당구 성안로 25 일대 (성안길 로데오)",
+        names: {
+          en: "Seongan-gil 50-Year Chewy Cold Noodles & Soy Crispy Pork",
+          ja: "城安街・創業50年のキャベツチョルミョン＆醤油タンスユク老舗",
+          zh: "城安街50年传统卷心菜筋面与脆皮酱油糖醋肉老铺",
+          ko: "성안길 50년 전통 양배추 쫄면 & 간장 탕수육 노포"
+        },
+        stories: {
+          en: "Every Cheongju native grew up eating here: a mountain of shredded cabbage over ultra-chewy noodles in sweet-tangy gochujang sauce, paired with crispy soy-garlic fried pork.",
+          ja: "清州市民なら誰もが学生時代に通った思い出の味。山盛りの千切りキャベツと甘辛いチョルミョンに、カリカリの醤油タンスユクを合わせるのが定番です。",
+          zh: "每位清州人从小吃到大的家乡味：堆成小山的爽脆卷心菜丝拌超劲道甜辣筋面，搭配外酥里嫩的蒜香酱油糖醋肉。",
+          ko: "청주 토박이들의 소울푸드로, 아삭한 양배추가 산처럼 쌓인 새콤달콤 쫄면에 바삭한 간장 만두·탕수육을 곁들이는 50년 전통 골목 노포입니다."
+        },
+        petTip: "Indoor nostalgia diner (No pets inside)",
+        orderingTip: "Order the combo: '쫄면 + 만두/고기 튀김' (Chewy Noodles + Fried Dumplings)"
+      },
+      {
+        step: "03",
+        time: "02:00 PM",
+        lat: 36.6388,
+        lng: 127.4864,
+        height: 1.9,
+        color: 0x255842,
+        petFriendly: true,
+        krName: "무심천 벚꽃·억새 산책로 & 철당간 광장 로컬 로스터리",
+        krAddr: "충북 청주시 상당구 남문로2가 48 (용두사지 철당간)",
+        names: {
+          en: "Musimcheon Stream Trail & 10th-Century Iron Flagpole Plaza",
+          ja: "無心川トレイルと高麗時代・鉄幢竿広場のロースタリー",
+          zh: "无心川芦苇步道与高丽时代铁幢竿广场咖啡馆",
+          ko: "무심천 수변 산책로 & 용두사지 철당간 로컬 로스터리"
+        },
+        stories: {
+          en: "Right in the middle of a modern shopping street stands a 1,000-year-old Goryeo dynasty iron flagpole. Grab a cup of coffee and walk 3 minutes to the wide Musimcheon riverside trail.",
+          ja: "街の真ん中に1000年前の高麗時代の鉄柱（国宝）がそびえ立ちます。広場前のカフェでコーヒーを買い、徒歩3分の無心川遊歩道を散歩しましょう。",
+          zh: "繁华街心矗立着千年历史的国宝高丽铁幢竿。在广场旁买一杯手冲咖啡，步行3分钟即可进入开阔的无心川河畔步道。",
+          ko: "도심 한복판에 서 있는 천년 국보 용두사지 철당간 광장에서 커피를 테이크아웃해, 도보 3분 거리의 무심천 억새 수변 산책로를 걷는 코스입니다."
+        },
+        petTip: "Trip-Pups Pick: Flat, wide riverside bike & dog-walking path along Musimcheon",
+        orderingTip: "Plaza benches & riverside lawn open 24/7"
+      },
+      {
+        step: "04",
+        time: "05:15 PM",
+        lat: 36.6479,
+        lng: 127.5021,
+        height: 3.3,
+        color: 0x3b6e8c,
+        petFriendly: true,
+        krName: "수암골 벽화마을 골목 & 우암산 자락 루프탑 노을 전망대",
+        krAddr: "충북 청주시 상당구 수암로 56 (수암골 전망대)",
+        names: {
+          en: "Suamgol Hillside Alley & Uamsan Sunset Rooftop",
+          ja: "スアムゴル壁画村の路地と牛岩山ルーフトップ夕日展望台",
+          zh: "寿岩谷壁画村小巷与牛岩山麓天台落日观景台",
+          ko: "수암골 골목길 & 우암산 자락 루프탑 노을 전망대"
+        },
+        stories: {
+          en: "Nestled on the western slope of Uamsan Mountain, this quiet hillside village looks straight across the entire Cheongju basin as golden sunset turns into a sea of evening lights.",
+          ja: "牛岩山の西斜面に位置する静かな丘の村。夕暮れ時には清州盆地全体が黄金色から宝石のような夜景へと変わる瞬間を一望できます。",
+          zh: "依偎在牛岩山西坡的静谧山村，黄昏时分可俯瞰整个清州盆地从金色晚霞渐变为万家灯火。",
+          ko: "우암산 서쪽 자락을 따라 형성된 조용한 달동네 골목과 전망 데크에서, 청주 도심 전체가 붉은 노을에서 반짝이는 야경으로 물드는 순간을 감상합니다."
+        },
+        petTip: "Trip-Pups Verified: Wooden sunset observation deck & outdoor terrace cafés",
+        orderingTip: "10-minute taxi ride (approx. 6,000 KRW) from Seongan-gil downtown"
+      }
+    ]
+  }
+];
+
+const PHRASES = [
+  {
+    id: "order_solo",
+    kr: "사장님, 안녕하세요! 혹시 혼자 왔는데 1인분 주문 가능할까요?",
+    en: "Hello! I came alone, is it possible to order for one person?",
+    ja: "こんにちは！一人で来たのですが、1人前の注文は可能でしょうか？",
+    zh: "老板您好！请问我一个人来，可以点一人份吗？"
+  },
+  {
+    id: "order_mild",
+    kr: "사장님, 매운 걸 잘 못 먹어서 덜 맵게 부탁드려도 될까요? 고수는 빼주세요.",
+    en: "Could you please make it less spicy? And no cilantro, please.",
+    ja: "辛いものが苦手なので、辛さ控えめでお願いできますか？パクチーは抜いてください。",
+    zh: "老板，我不太能吃辣，可以做微辣吗？请不要放香菜。"
+  },
+  {
+    id: "order_pet",
+    kr: "사장님, 강아지 이동가방에 넣었는데 야외 자리나 입구 쪽에 앉아도 될까요?",
+    en: "My dog is inside a pet carrier, may we sit at the outdoor or entrance table?",
+    ja: "犬をキャリーバッグに入れているのですが、テラス席か入口近くに座っても大丈夫ですか？",
+    zh: "老板，小狗装在宠物包里，请问我们可以坐户外座位或门口位置吗？"
+  },
+  {
+    id: "order_recommend",
+    kr: "사장님, 이 집에서 단골분들이 제일 많이 시키는 대표 메뉴 하나만 추천해 주세요!",
+    en: "Please recommend the #1 signature dish that local regulars order most!",
+    ja: "常連さんが一番よく頼む看板メニューを一つおすすめしてください！",
+    zh: "老板，请推荐一道本地老顾客点得最多的招牌菜！"
+  }
+];
+
+let state = {
+  lang: "en",
+  courseIdx: 0,
+  spotIdx: 0,
+  petFilter: false,
+  engine: "3d",
+  savedSpots: ["seongsu-01", "seongsu-02", "seongsu-03", "seongsu-04"],
+  playingAudio: null,
+  ambientCtx: null,
+  ambientRunning: false,
+  waveTimer: null
+};
+
+const waveformBar = document.getElementById("waveformBar");
+for (let i = 0; i < 36; i++) {
+  const d = document.createElement("div");
+  d.className = "wave-col";
+  const sc = (0.18 + ((i * 13) % 65) / 100).toFixed(2);
+  d.style.transform = `scaleY(${sc})`;
+  waveformBar.appendChild(d);
+}
+
+function animateWaveform(active) {
+  clearInterval(state.waveTimer);
+  const cols = waveformBar.querySelectorAll(".wave-col");
+  if (!active) {
+    cols.forEach((c, idx) => {
+      c.classList.remove("playing");
+      const sc = (0.18 + ((idx * 13) % 55) / 100).toFixed(2);
+      c.style.transform = `scaleY(${sc})`;
+    });
+    return;
+  }
+  state.waveTimer = setInterval(() => {
+    cols.forEach((c) => {
+      c.classList.add("playing");
+      const sc = (0.20 + Math.random() * 0.80).toFixed(2);
+      c.style.transform = `scaleY(${sc})`;
+    });
+  }, 120);
+}
+
+function renderCourseTabs() {
+  const container = document.getElementById("courseTabs");
+  container.innerHTML = "";
+  COURSES.forEach((c, idx) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "course-tab" + (idx === state.courseIdx ? " active" : "");
+    const petCount = c.spots.filter(s => s.petFriendly).length;
+    btn.innerHTML = `
+      <div class="course-tab-region">${c.region}</div>
+      <div class="course-tab-name">${c.names[state.lang]}</div>
+      <div class="course-tab-meta">4 Stops (${petCount}/4 Pet-OK)</div>
+    `;
+    btn.addEventListener("click", () => {
+      state.courseIdx = idx;
+      state.spotIdx = 0;
+      stopVoiceAudio();
+      renderAll();
+    });
+    container.appendChild(btn);
+  });
+}
+
+function renderSpots() {
+  const course = COURSES[state.courseIdx];
+  document.getElementById("activeCourseTitle").textContent = `Course 0${ state.courseIdx + 1 } : ${ course.names[state.lang] }`;
+  document.getElementById("activeCourseWalk").textContent = course.walk;
+  document.getElementById("docentTranscript").textContent = course.transcripts[state.lang];
+
+  const col = document.getElementById("spotsColumn");
+  col.innerHTML = "";
+
+  course.spots.forEach((s, idx) => {
+    if (state.petFilter && !s.petFriendly) return;
+    const card = document.createElement("article");
+    card.className = "spot-card" + (idx === state.spotIdx ? " active" : "");
+    const key = `${course.id}-${s.step}`;
+    const isSaved = state.savedSpots.includes(key);
+
+    const naverUrl = `https://map.naver.com/p/search/${encodeURIComponent(s.krAddr.split("(")[0].trim())}`;
+    const googleUrl = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`;
+
+    card.innerHTML = `
+      <div class="spot-head">
+        <span class="spot-step">STOP ${s.step}</span>
+        <span class="spot-time">${s.time} (${s.lat.toFixed(4)}°N, ${s.lng.toFixed(4)}°E)</span>
+      </div>
+      <h3 class="spot-name">${s.names[state.lang]}</h3>
+      <div class="spot-kr-addr">${s.krName} (${s.krAddr})</div>
+      <p class="spot-story">${s.stories[state.lang]}</p>
+      <div class="spot-badges">
+        <span class="badge-tag ${s.petFriendly ? 'badge-pet' : ''}">${s.petTip}</span>
+        <span class="badge-tag badge-tip">${s.orderingTip}</span>
+      </div>
+      <div class="spot-footer">
+        <div class="map-links">
+          <a class="map-ext-link" href="${naverUrl}" target="_blank" rel="noopener">Naver Map ↗</a>
+          <a class="map-ext-link" href="${googleUrl}" target="_blank" rel="noopener">Google Maps ↗</a>
+        </div>
+        <button type="button" class="btn-secondary save-spot-btn" data-key="${key}">
+          ${isSaved ? "Saved in Passport ✓" : "+ Save to Passport"}
+        </button>
+      </div>
+    `;
+
+    card.addEventListener("click", (ev) => {
+      if (ev.target.closest("a") || ev.target.closest(".save-spot-btn")) return;
+      state.spotIdx = idx;
+      updateHud();
+      renderSpots();
+      highlight3DSpot(idx);
+      focusLeafletSpot(idx);
+    });
+
+    card.querySelector(".save-spot-btn").addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const i = state.savedSpots.indexOf(key);
+      if (i >= 0) state.savedSpots.splice(i, 1);
+      else state.savedSpots.push(key);
+      renderSpots();
+      renderItinerary();
+    });
+
+    col.appendChild(card);
+  });
+  updateHud();
+}
+
+function updateHud() {
+  const course = COURSES[state.courseIdx];
+  const s = course.spots[state.spotIdx] || course.spots[0];
+  document.getElementById("hudStepTag").textContent = `Stop ${s.step} of 04 : ${s.time}`;
+  document.getElementById("hudSpotTitle").textContent = s.names[state.lang];
+  document.getElementById("hudSpotCoords").textContent = `${s.lat.toFixed(4)}° N, ${s.lng.toFixed(4)}° E (${s.krName})`;
+}
+
+function renderPhrases() {
+  const grid = document.getElementById("phraseGrid");
+  grid.innerHTML = "";
+  PHRASES.forEach((p) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "phrase-btn";
+    const sub = p[state.lang] || p.en;
+    btn.innerHTML = `
+      <div class="phrase-kr">${p.kr}</div>
+      <div class="phrase-tr">${sub} (Tap to Play Korean Voice)</div>
+    `;
+    btn.addEventListener("click", () => {
+      document.getElementById("ownerDisplayKr").textContent = p.kr;
+      playMp3File(`audio/${p.id}.mp3`, p.kr, "ko-KR");
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function renderItinerary() {
+  const list = document.getElementById("itineraryList");
+  list.innerHTML = "";
+  if (state.savedSpots.length === 0) {
+    list.innerHTML = `<div class="itinerary-item">No spots saved yet. Click '+ Save to Passport' on any stop.</div>`;
+    return;
+  }
+  state.savedSpots.forEach((key) => {
+    const [cid, step] = key.split("-");
+    const c = COURSES.find(x => x.id === cid);
+    if (!c) return;
+    const s = c.spots.find(x => x.step === step);
+    if (!s) return;
+    const row = document.createElement("div");
+    row.className = "itinerary-item";
+    row.innerHTML = `
+      <div><strong>[${c.region}]</strong> ${s.names[state.lang]} <span class="itinerary-kr">(${s.krName})</span></div>
+      <span>${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}</span>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function stopVoiceAudio() {
+  if (state.playingAudio) {
+    state.playingAudio.pause();
+    state.playingAudio = null;
+  }
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  animateWaveform(false);
+  document.getElementById("playDocentBtn").textContent = "Play Voice Docent";
+}
+
+function playMp3File(src, fallbackText, fallbackLang) {
+  stopVoiceAudio();
+  const audio = new Audio(src);
+  state.playingAudio = audio;
+  document.getElementById("playDocentBtn").textContent = "Stop Voice Docent";
+  animateWaveform(true);
+  audio.addEventListener("ended", () => {
+    animateWaveform(false);
+    document.getElementById("playDocentBtn").textContent = "Play Voice Docent";
+  });
+  audio.addEventListener("error", () => {
+    if (window.speechSynthesis && fallbackText) {
+      const u = new SpeechSynthesisUtterance(fallbackText);
+      u.lang = fallbackLang || "en-US";
+      u.onend = () => animateWaveform(false);
+      window.speechSynthesis.speak(u);
+    } else {
+      animateWaveform(false);
+    }
+  });
+  audio.play().catch(() => {
+    animateWaveform(false);
+  });
+}
+
+document.getElementById("playDocentBtn").addEventListener("click", () => {
+  if (state.playingAudio && !state.playingAudio.paused) {
+    stopVoiceAudio();
+    return;
+  }
+  const course = COURSES[state.courseIdx];
+  const src = `audio/${state.lang}_${course.id}.mp3`;
+  const langMap = { en: "en-US", ja: "ja-JP", zh: "zh-CN", ko: "ko-KR" };
+  playMp3File(src, course.transcripts[state.lang], langMap[state.lang]);
+});
+
+document.getElementById("elevenToggleBtn").addEventListener("click", () => {
+  const row = document.getElementById("elevenConfigRow");
+  row.style.display = row.style.display === "none" ? "flex" : "none";
+});
+
+document.getElementById("runElevenBtn").addEventListener("click", async () => {
+  const apiKey = document.getElementById("elevenApiKey").value.trim();
+  const course = COURSES[state.courseIdx];
+  if (!apiKey) {
+    playMp3File(`audio/${state.lang}_${course.id}.mp3`, course.transcripts[state.lang], "en-US");
+    return;
+  }
+  try {
+    animateWaveform(true);
+    const voiceId = "21m00Tcm4TlvDq8ikWAM";
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: course.transcripts[state.lang],
+        model_id: "eleven_multilingual_v2"
+      })
+    });
+    if (!res.ok) throw new Error("API Fallback");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    playMp3File(url, course.transcripts[state.lang], "en-US");
+  } catch (_) {
+    playMp3File(`audio/${state.lang}_${course.id}.mp3`, course.transcripts[state.lang], "en-US");
+  }
+});
+
+document.getElementById("ambientBtn").addEventListener("click", () => {
+  const btn = document.getElementById("ambientBtn");
+  if (state.ambientRunning) {
+    if (state.ambientCtx) state.ambientCtx.close();
+    state.ambientCtx = null;
+    state.ambientRunning = false;
+    btn.classList.remove("active");
+    btn.textContent = "Alley Soundscape: OFF";
+    return;
+  }
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioCtx();
+  const bufferSize = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.15;
+  }
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  noise.loop = true;
+
+  const filter = ctx.createBiquadFilter();
+  const soundType = COURSES[state.courseIdx].soundType;
+  filter.type = soundType === "sizzle" ? "bandpass" : "lowpass";
+  filter.frequency.value = soundType === "sizzle" ? 1100 : soundType === "waves" ? 320 : 520;
+
+  const gain = ctx.createGain();
+  gain.gain.value = 0.14;
+
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  noise.start();
+
+  state.ambientCtx = ctx;
+  state.ambientRunning = true;
+  btn.classList.add("active");
+  btn.textContent = `Alley Soundscape: ON (${soundType.toUpperCase()})`;
+});
+
+document.getElementById("exportGpxBtn").addEventListener("click", () => {
+  const course = COURSES[state.courseIdx];
+  const wpts = course.spots.map(s =>
+    `  <wpt lat="${s.lat}" lon="${s.lng}"><name>${s.names.en}</name><desc>${s.krName} (${s.krAddr})</desc></wpt>`
+  ).join("\n");
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="K-Local Atlas">\n${wpts}\n</gpx>`;
+  const blob = new Blob([gpx], { type: "application/gpx+xml" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `k-local-atlas-${course.id}.gpx`;
+  a.click();
+  document.getElementById("shareStatus").textContent = `Downloaded GPX file: k-local-atlas-${course.id}.gpx`;
+});
+
+document.getElementById("copyShareBtn").addEventListener("click", () => {
+  const course = COURSES[state.courseIdx];
+  const url = `${location.origin}${location.pathname}?course=${course.id}&lang=${state.lang}`;
+  if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+  document.getElementById("shareStatus").textContent = `Copied link: ${url}`;
+});
+
+document.querySelectorAll(".lang-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.lang = btn.dataset.lang;
+    stopVoiceAudio();
+    renderAll();
+  });
+});
+
+document.getElementById("petFilterBtn").addEventListener("click", (ev) => {
+  state.petFilter = !state.petFilter;
+  ev.currentTarget.classList.toggle("active", state.petFilter);
+  renderSpots();
+});
+
+let scene, camera, renderer, dioramaGroup, travelerOrb, pinMeshes = [];
+let isDragging = false, prevX = 0, rotY = 0.55;
+
+function initThreeEngine() {
+  const canvas = document.getElementById("threeCanvas");
+  const wrap = canvas.parentElement;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x181512);
+  scene.fog = new THREE.FogExp2(0x181512, 0.032);
+
+  camera = new THREE.PerspectiveCamera(42, wrap.clientWidth / wrap.clientHeight, 0.1, 100);
+  camera.position.set(0, 9.5, 13.5);
+  camera.lookAt(0, 0.5, 0);
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const amb = new THREE.AmbientLight(0xf6ebd8, 0.78);
+  scene.add(amb);
+
+  const dir = new THREE.DirectionalLight(0xffcf9e, 1.35);
+  dir.position.set(8, 15, 10);
+  scene.add(dir);
+
+  dioramaGroup = new THREE.Group();
+  scene.add(dioramaGroup);
+
+  canvas.addEventListener("pointerdown", (e) => { isDragging = true; prevX = e.clientX; });
+  window.addEventListener("pointerup", () => { isDragging = false; });
+  window.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    rotY += (e.clientX - prevX) * 0.007;
+    prevX = e.clientX;
+  });
+
+  window.addEventListener("resize", () => {
+    if (!wrap.clientWidth) return;
+    camera.aspect = wrap.clientWidth / wrap.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  });
+
+  build3DCourseScene();
+  animate3D();
+}
+
+function build3DCourseScene() {
+  if (!dioramaGroup) return;
+  while (dioramaGroup.children.length) dioramaGroup.remove(dioramaGroup.children[0]);
+  pinMeshes = [];
+
+  const slabGeo = new THREE.BoxGeometry(13.5, 0.6, 9.5);
+  const slabMat = new THREE.MeshStandardMaterial({ color: 0x26221d, roughness: 0.85 });
+  const slab = new THREE.Mesh(slabGeo, slabMat);
+  slab.position.y = -0.3;
+  dioramaGroup.add(slab);
+
+  const grid = new THREE.GridHelper(13, 18, 0x5c5245, 0x363028);
+  grid.position.y = 0.02;
+  dioramaGroup.add(grid);
+
+  const blockPositions = [
+    [-4.8, -2.5, 1.5, 1.4, 1.4], [-2.5, -2.8, 1.8, 2.1, 1.3], [0.2, -2.6, 2.0, 1.6, 1.5],
+    [3.1, -2.4, 1.7, 2.4, 1.4], [-4.5, 2.4, 1.6, 1.9, 1.5], [-1.2, 2.6, 2.2, 1.3, 1.4],
+    [2.2, 2.5, 1.8, 2.0, 1.5], [4.6, 1.8, 1.4, 1.5, 1.4]
+  ];
+  blockPositions.forEach(([x, z, w, h, d], idx) => {
+    const bGeo = new THREE.BoxGeometry(w, h, d);
+    const bMat = new THREE.MeshStandardMaterial({
+      color: idx % 2 === 0 ? 0x3b342c : 0x4a3e33,
+      roughness: 0.75
+    });
+    const mesh = new THREE.Mesh(bGeo, bMat);
+    mesh.position.set(x, h / 2, z);
+    dioramaGroup.add(mesh);
+  });
+
+  const course = COURSES[state.courseIdx];
+  const stopCoords = [
+    new THREE.Vector3(-4.2, 0.1, 0.6),
+    new THREE.Vector3(-1.4, 0.1, -0.7),
+    new THREE.Vector3(1.5, 0.1, 0.8),
+    new THREE.Vector3(4.3, 0.1, -0.5)
+  ];
+
+  const curve = new THREE.CatmullRomCurve3(stopCoords);
+  const tubeGeo = new THREE.TubeGeometry(curve, 64, 0.09, 8, false);
+  const tubeMat = new THREE.MeshStandardMaterial({ color: 0xe06b43, emissive: 0x6e2711 });
+  dioramaGroup.add(new THREE.Mesh(tubeGeo, tubeMat));
+
+  course.spots.forEach((s, idx) => {
+    const pos = stopCoords[idx];
+    const h = s.height;
+    const cylGeo = new THREE.CylinderGeometry(0.42, 0.52, h, 24);
+    const cylMat = new THREE.MeshStandardMaterial({
+      color: s.color,
+      roughness: 0.4,
+      emissive: idx === state.spotIdx ? s.color : 0x000000,
+      emissiveIntensity: idx === state.spotIdx ? 0.45 : 0.0
+    });
+    const pillar = new THREE.Mesh(cylGeo, cylMat);
+    pillar.position.set(pos.x, h / 2, pos.z);
+    dioramaGroup.add(pillar);
+
+    const ringGeo = new THREE.RingGeometry(0.62, 0.78, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: idx === state.spotIdx ? 0xffa67a : 0x7c7060,
+      side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(pos.x, 0.05, pos.z);
+    dioramaGroup.add(ring);
+
+    pinMeshes.push({ pillar, ring, color: s.color });
+  });
+
+  const orbGeo = new THREE.SphereGeometry(0.22, 16, 16);
+  const orbMat = new THREE.MeshBasicMaterial({ color: 0xffe4b5 });
+  travelerOrb = new THREE.Mesh(orbGeo, orbMat);
+  travelerOrb.userData = { curve, t: 0 };
+  dioramaGroup.add(travelerOrb);
+}
+
+function highlight3DSpot(activeIdx) {
+  pinMeshes.forEach((item, idx) => {
+    item.pillar.material.emissive.setHex(idx === activeIdx ? item.color : 0x000000);
+    item.pillar.material.emissiveIntensity = idx === activeIdx ? 0.48 : 0.0;
+    item.ring.material.color.setHex(idx === activeIdx ? 0xffa67a : 0x7c7060);
+  });
+}
+
+function animate3D() {
+  requestAnimationFrame(animate3D);
+  if (!dioramaGroup) return;
+  if (!isDragging) rotY += 0.0018;
+  dioramaGroup.rotation.y = rotY;
+  if (travelerOrb && travelerOrb.userData.curve) {
+    travelerOrb.userData.t = (travelerOrb.userData.t + 0.0022) % 1;
+    const pt = travelerOrb.userData.curve.getPointAt(travelerOrb.userData.t);
+    travelerOrb.position.set(pt.x, pt.y + 0.25, pt.z);
+  }
+  renderer.render(scene, camera);
+}
+
+let lmap = null, lmarkers = [], lline = null;
+
+function initOrUpdateLeaflet() {
+  const course = COURSES[state.courseIdx];
+  if (!lmap) {
+    lmap = L.map("leafletMap").setView([course.spots[0].lat, course.spots[0].lng], 14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(lmap);
+  }
+  lmarkers.forEach(m => lmap.removeLayer(m));
+  lmarkers = [];
+  if (lline) lmap.removeLayer(lline);
+
+  const latlngs = [];
+  course.spots.forEach((s, idx) => {
+    latlngs.push([s.lat, s.lng]);
+    const m = L.marker([s.lat, s.lng]).addTo(lmap);
+    m.bindPopup(`<b>STOP ${s.step}: ${s.names[state.lang]}</b><br>${s.krName}<br>${s.krAddr}`);
+    m.on("click", () => {
+      state.spotIdx = idx;
+      updateHud();
+      renderSpots();
+      highlight3DSpot(idx);
+    });
+    lmarkers.push(m);
+  });
+
+  lline = L.polyline(latlngs, { color: "#b84225", weight: 4 }).addTo(lmap);
+  lmap.fitBounds(lline.getBounds(), { padding: [36, 36] });
+}
+
+function focusLeafletSpot(idx) {
+  if (!lmap || !lmarkers[idx]) return;
+  const course = COURSES[state.courseIdx];
+  const s = course.spots[idx];
+  lmap.setView([s.lat, s.lng], 15);
+  lmarkers[idx].openPopup();
+}
+
+document.getElementById("btnEngine3D").addEventListener("click", () => {
+  state.engine = "3d";
+  document.getElementById("btnEngine3D").classList.add("active");
+  document.getElementById("btnEngine2D").classList.remove("active");
+  document.getElementById("threeCanvas").style.display = "block";
+  document.getElementById("leafletMap").style.display = "none";
+});
+
+document.getElementById("btnEngine2D").addEventListener("click", () => {
+  state.engine = "2d";
+  document.getElementById("btnEngine2D").classList.add("active");
+  document.getElementById("btnEngine3D").classList.remove("active");
+  document.getElementById("threeCanvas").style.display = "none";
+  document.getElementById("leafletMap").style.display = "block";
+  setTimeout(() => {
+    initOrUpdateLeaflet();
+    if (lmap) lmap.invalidateSize();
+  }, 60);
+});
+
+function renderAll() {
+  renderCourseTabs();
+  renderSpots();
+  renderPhrases();
+  renderItinerary();
+  build3DCourseScene();
+  if (state.engine === "2d") initOrUpdateLeaflet();
+}
+
+const params = new URLSearchParams(location.search);
+if (params.get("course")) {
+  const ci = COURSES.findIndex(c => c.id === params.get("course"));
+  if (ci >= 0) state.courseIdx = ci;
+}
+if (params.get("lang") && ["en", "ja", "zh", "ko"].includes(params.get("lang"))) {
+  state.lang = params.get("lang");
+  document.querySelectorAll(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === state.lang));
+}
+
+initThreeEngine();
+renderAll();
+</script>
+</body>
+</html>
